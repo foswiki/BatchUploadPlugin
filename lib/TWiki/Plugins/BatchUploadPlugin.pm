@@ -278,6 +278,7 @@ sub doUnzip {
     foreach $fileName ( sort @memberNames ) {
         $member = $zip->memberNamed($fileName);
         next if $member->isDirectory();
+        $member->unixFileAttributes(0600);
 
         $fileName =~ /\/?(.*\/)?(.+)/;
         $fileName = $2;
