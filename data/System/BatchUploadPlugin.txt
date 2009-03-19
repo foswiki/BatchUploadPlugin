@@ -1,0 +1,96 @@
+%META:TOPICINFO{author="ProjectContributor" date="1099241512" format="1.0" version="1.1"}%
+---+!! Batch Upload Plugin
+<!--
+One line description, required for extensions repository catalog.
+   * Set SHORTDESCRIPTION = Attach multiple files at once by uploading a zip archive
+-->
+%SHORTDESCRIPTION%
+
+%TOC%
+
+---++ Usage
+
+   * Enable this plugin in =LocalSite.cfg= or =configure=  - Test: %IF{"context BatchUploadPluginEnabled" then='%ICON{choice-yes}% !BatchUploadPlugin is enabled' else='%ICON{choice-no}% !BatchUploadPlugin is not enabled. Enable this plugin below.'}%
+   * Attach a =zip= file to a topic
+      * If a comment is entered with the zip file, the comment will be assigned to all contained files unless the =IMPORTFILECOMMENTS= flag below is enabled and the archive contains corresponding file comments (in which case the latter take precedence).
+      * Using archive file comments, it is possible to specifiy hide and/or link flags on a file-per-file basis which override those given in the upload form by enabling the =FILECOMMENTFLAGS= flag below and adding prefixes of the form =+h-l= (case insensitive, given in arbitrary order, to be separated from the 'main' description by at least one whitespace).
+
+---++ Plugin Settings
+
+Plugin settings are stored as preferences values. To change the setting you need to overwrite them in %WIKIPREFSTOPIC%. Changing them here will have no effect! This allows you to upgrade the plugin without having worry about loosing your settings.
+
+   * Enabled state - if disabled, does nothing. You will need to overwrite this if you want the plugin enabled anywhere (either in site or per-web)
+      * Set BATCHUPLOADPLUGIN_ENABLED = 0
+   * File comments in archives will be imported (and override the default comment specified in the upload form)
+      * Set BATCHUPLOADPLUGIN_IMPORTFILECOMMENTS = 1
+   * File comments in archives may contain prefixes (see above) which override specified default hide and link flags (this flag is independent from the previous one; if it is disabled, existing prefixes will not be stripped from imported comments)
+      * Set BATCHUPLOADPLUGIN_FILECOMMENTFLAGS = 1
+
+---+++ Conditional Batch Upload
+
+This plugin provides the ability to choose between attaching uploaded zip files, or extracting and attaching the contents.  To enable this feature, add the following lines to the skin templates files, just after the =hidefile= table entry:
+
+   * =templates/attach.pattern.tmpl= (=attachform= section):
+<blockquote>
+<verbatim>
+ <input type="checkbox" class="foswikiCheckbox" id="batchupload" checked name="batchupload" %BATCHUPLOADCHECKBOX% /><label for="batchupload">%MAKETEXT{"Batch upload for zip file"}%</label> <span class="foswikiGrayText">%MAKETEXT{"Extracts and uploads individual file in zip archive."}%</span>
+</verbatim>
+</blockquote>
+   * =templates/attach.tmpl= and  =templates/attach.classic.tmpl= (=content= section):
+<blockquote>
+<verbatim>
+ <tr>
+  <td align="right">
+   Batch Upload:
+  </td><td>
+   <input type="checkbox" name="batchupload" %BATCHUPLOADCHECKBOX% />Extract Files and Attach them to the Topic
+  </td>
+ </tr>
+</verbatim>
+</blockquote>
+
+In addition, use =configure= to set the =$Foswiki::cfg{Plugins}{BatchUploadPlugin}{usercontrol}= option to true.
+
+---++ Caveats
+   * Contents of nested zips will only be attached partially
+   
+---++ Further Development
+   * Support nested zips
+   * Support interactive modification of hide and link attributes on a file-per-file basis during archive import
+   * Support other archive formats (e.g., tar)
+
+---++ Installation Instructions
+
+%$INSTALL_INSTRUCTIONS%
+
+---++ Plugin Files
+
+   | *File:* | *Description:* |
+%$MANIFEST%
+
+---++ Plugin Info
+
+| Plugin Author(s): | Foswiki:Main.AndrewJones, Foswiki:Main.ArthurClemens, Foswiki:Main.MartinCleaver |
+| Copyright &copy;: | Foswiki:Main.AndrewJones, Foswiki:Main.ArthurClemens, Foswiki:Main.MartinCleaver |
+| License: | [[http://www.gnu.org/copyleft/gpl.html][GPL]] |
+| Plugin Release: | %$RELEASE% |
+| Plugin Version: | %$VERSION% |
+| Change History: | <!-- versions below in reverse order -->&nbsp; |
+| 19 Mar 2009 | Foswiki:Main.AndrewJones: Ported to Foswiki as 1.0; Small code fixes (using Foswiki API); Doc update |
+| 09 Jul 2008 | TWiki:Main.MarkusUeberall: Added support for zip file comments. All individual files now inherit the hide and link flags in the same way they inherit the comment specified in the upload form. |
+| 21 Mar 2007 | TWiki:Main.ScottHoge: added =usercontrol= cfg, to allow global control of upload as in v1.1 |
+| 20 Feb 2007 | TWiki:Main.MartinRothbaum, TWiki:Main.SopanShewale: added option to enable/disable unzip-and-attach behavior via cgi parameter. |
+| 23 Dec 2006 | TWiki:Main.ArthurClemens: Cleaned up and repackaged. Zipped files are now checked against the TWiki upload filter - for instance =php= files will get a =.txt= extension; spaces in zipped filenames will be changed to underscores. If a comment is entered when uploading a zip, the comment text will be assigned to all new attachments. After successful upload you will no longer see an error screen. |
+| 31 Oct 2004 | TWiki:Main.MartinCleaver - initial version as plugin |
+| 09 Apr 2004 | TWiki:Main.DiabJerius |
+| 17 Nov 2003 | TWiki:Main.JohannesMartin |
+| 20 Mar 2003 | TWiki:Main.RonKellam |
+| 16 Aug 2002 | TWiki:Main.ThomasWeigert |
+| 14 Jan 2002 | TWiki:Main.RyanFreebern |
+| 30 Oct 2001 | TWiki:Main.VitoMiliano |
+| Dependencies: | %$DEPENDENCIES% |
+| Plugin Home: | http://foswiki.org/Extensions/%TOPIC% |
+| Support: | http://foswiki.org/Support/%TOPIC% |
+
+__Related Topics:__ %SYSTEMWEB%.DefaultPreferences, %USERSWEB%.SitePreferences, [[%SYSTEMWEB%.Plugins][Plugins]]
+

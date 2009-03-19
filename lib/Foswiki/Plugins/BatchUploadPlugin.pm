@@ -1,11 +1,10 @@
-package TWiki::Plugins::BatchUploadPlugin;
-
 # Plugin for Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 #
 # Copyright (C) 2000-2003 Andrea Sterbini, a.sterbini@flashnet.it
 # Copyright (C) 2001-2004 Peter Thoeny, peter@thoeny.com
 # Copyright (C) Vito Miliano, ZacharyHamm, JohannesMartin, DiabJerius
 # Copyright (C) 2004 Martin Cleaver, Martin.Cleaver@BCS.org.uk
+# Copyright (C) 2009 Andrew Jones, andrewjones86@gmail.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,10 +18,10 @@ package TWiki::Plugins::BatchUploadPlugin;
 # http://www.gnu.org/copyleft/gpl.html
 #
 
-# Originally by Vito Miliano EPIC Added 22 Mar 2003
-# Modified by ZacharyHamm, JohannesMartin, DiabJerius
-# Converted to a plugin by MartinCleaver
-# Updated by ArthurClemens, MarkusUeberall
+package Foswiki::Plugins::BatchUploadPlugin;
+
+require Foswiki::Func;
+require Foswiki::Plugins;
 
 use strict;
 use Archive::Zip qw(:ERROR_CODES :CONSTANTS :PKZIP_CONSTANTS);
@@ -32,20 +31,14 @@ use diagnostics;
 use vars qw(
   $web $topic $user $installWeb $VERSION $RELEASE $pluginName
   $debug $pluginEnabled $stack $stackDepth $MAX_STACK_DEPTH
-  $importFileComments $fileCommentFlags
+  $importFileComments $fileCommentFlags $SHORTDESCRIPTION $NO_PREFS_IN_TOPIC
 );
 
-# This should always be $Rev$ so that TWiki can determine the checked-in
-# status of the plugin. It is used by the build automation tools, so
-# you should leave it alone.
-$VERSION = '$Rev$';
-
-# This is a free-form string you can use to "name" your own plugin version.
-# It is *not* used by the build automation tools, but is reported as part
-# of the version number in PLUGINDESCRIPTIONS.
-$RELEASE = '1.4';
-
-$pluginName = 'BatchUploadPlugin';    # Name of this Plugin
+our $VERSION = '$Rev$';
+our $RELEASE = '1.0';
+our $SHORTDESCRIPTION = 'Attach multiple files at once by uploading a zip archive';
+our $NO_PREFS_IN_TOPIC = 1;
+our $pluginName = 'BatchUploadPlugin';
 
 BEGIN {
 
@@ -61,23 +54,16 @@ BEGIN {
 sub initPlugin {
     ( $topic, $web, $user, $installWeb ) = @_;
 
-    # check for Plugins.pm versions
-    if ( $TWiki::Plugins::VERSION < 1.024 ) {
-        TWiki::Func::writeWarning(
-            "Version mismatch between $pluginName and Plugins.pm");
-        return 0;
-    }
-
     # Get plugin debug flag
-    $debug = TWiki::Func::getPluginPreferencesFlag("DEBUG");
+    $debug = $Foswiki::cfg{Plugins}{$pluginName}{Debug} || 0;
 
-    $pluginEnabled = TWiki::Func::getPluginPreferencesValue("ENABLED") || 0;
+    $pluginEnabled = Foswiki::Func::getPluginPreferencesValue("ENABLED") || 0;
 
-    $importFileComments = TWiki::Func::getPluginPreferencesFlag("IMPORTFILECOMMENTS");
-    $fileCommentFlags = TWiki::Func::getPluginPreferencesFlag("FILECOMMENTFLAGS");
+    $importFileComments = Foswiki::Func::getPluginPreferencesFlag("IMPORTFILECOMMENTS") || 1;
+    $fileCommentFlags = Foswiki::Func::getPluginPreferencesFlag("FILECOMMENTFLAGS") || 1;
 
     # Plugin correctly initialized
-    TWiki::Func::writeDebug("- ${pluginName}::initPlugin( $web.$topic ) is OK")
+    Foswiki::Func::writeDebug("- ${pluginName}::initPlugin( $web.$topic ) is OK")
       if $debug;
 
     return 1;
@@ -94,15 +80,16 @@ attachments get lost.
 sub beforeAttachmentSaveHandler {
     my ( $attrHashRef, $topic, $web ) = @_;
 
-    TWiki::Func::writeDebug(
+    Foswiki::Func::writeDebug(
 "- ${pluginName}::beforeAttachmentSaveHandler( $_[2].$_[1] - attachment: $attrHashRef->{attachment})"
     ) if $debug;
 
-    my $cgiQuery = TWiki::Func::getCgiQuery();
+    my $cgiQuery = Foswiki::Func::getCgiQuery();
     return if ( !$pluginEnabled );
     
     my $batchupload = $cgiQuery->param('batchupload') || '';
-    return if ( ( $TWiki::cfg{Plugins}{BatchUploadPlugin}{usercontrol} ) 
+    
+    return if ( ( $Foswiki::cfg{Plugins}{$pluginName}{usercontrol} ) 
                 && ( $batchupload ne 'on' ) );
     
     my $attachmentName = $attrHashRef->{attachment};
@@ -112,7 +99,7 @@ sub beforeAttachmentSaveHandler {
     return if ( $stackDepth > $MAX_STACK_DEPTH );
 
     $stack->{$attachmentName} = $stackDepth;
-    TWiki::Func::writeDebug(
+    Foswiki::Func::writeDebug(
         "$pluginName - $attachmentName has stack depth $stackDepth")
       if $debug;
     $stackDepth++;
@@ -127,13 +114,17 @@ sub beforeAttachmentSaveHandler {
 
     if ($result) {
         if ( $stack->{$attachmentName} == 0 ) {
-            TWiki::Func::writeDebug(
+            Foswiki::Func::writeDebug(
                 "$pluginName - Result stack: " . $stack->{$attachmentName} )
               if $debug;
-            my $url = TWiki::Func::getViewUrl( $web, $topic );
-            print $cgiQuery->redirect($url);
-            exit 0
-              ; # user won't see this, but if left out the zip file will be attached, overwriting the zipped files
+            my $url = Foswiki::Func::getViewUrl( $web, $topic );
+            
+            Foswiki::Func::redirectCgiQuery( undef, $url );
+            
+            # SMELL: bit of a hack?
+            # user won't see this, but if left out the zip file will be attached, overwriting the unzipped files
+            #exit 0; this just returns a blank page to the user, not very good...
+            throw Error::Simple( 'Do not save zip file!' ); # this seems to work fine, the user gets returned to their viewed page and the unzipped files do not get overwritten. Presumably it is caught somewhere higher up.
         }
     }
 
@@ -179,7 +170,7 @@ sub updateAttachment {
 
     # Create temp directory to unzip files into
     # the unzipped files will be attached afterwards
-    my $workArea = TWiki::Func::getWorkArea($pluginName);
+    my $workArea = Foswiki::Func::getWorkArea($pluginName);
 
     # Temp file in workarea
     $tempDir = $workArea . '/' . int( rand(1000000000) );
@@ -191,7 +182,7 @@ sub updateAttachment {
     # tries to just write the file to the current directory.
     chdir($tempDir);
       
-    TWiki::Func::writeDebug("$pluginName - Created temp dir $tempDir")
+    Foswiki::Func::writeDebug("$pluginName - Created temp dir $tempDir")
       if $debug;
 
     %processedFiles = doUnzip( $tempDir, $zip );
@@ -220,11 +211,11 @@ sub updateAttachment {
         $tmpFileComment = $fileComment unless $tmpFileComment;
         $tmpFileComment = "Extracted from $originalZipName" unless $tmpFileComment;
 
-        TWiki::Func::writeDebug(
+        Foswiki::Func::writeDebug(
 "$pluginName - Trying to attach: fileName=$fileName, fileSize=$fileSize, fileDate=$fileDate, fileComment=$tmpFileComment, tmpFilename=$tmpFilename"
         ) if $debug;
 
-        TWiki::Func::saveAttachment(
+        Foswiki::Func::saveAttachment(
             $webName, $topic,
             my $result = $fileName,
             {
@@ -239,11 +230,11 @@ sub updateAttachment {
         );
 
         if ( $result eq $fileName ) {
-            TWiki::Func::writeDebug("$pluginName - Attaching $fileName went OK")
+            Foswiki::Func::writeDebug("$pluginName - Attaching $fileName went OK")
               if $debug;
         }
         else {
-            TWiki::Func::writeDebug(
+            Foswiki::Func::writeDebug(
                 "$pluginName - An error occurred while attaching $fileName")
               if $debug;
             die "An error occurred while attaching $fileName";
@@ -284,20 +275,8 @@ sub doUnzip {
         $fileName = $2;
 
         # Make filename safe:
-        my $origFileName = $fileName;
-
-        # Protect against evil filenames - especially for out temp file.
-        $fileName =~ /\.*([ \w_.\-]+)$/go;
-        $fileName = $1;
-
-        # Change spaces to underscore
-        $fileName =~ s/ /_/go;
-
-        # Remove problematic chars
-        $fileName =~ s/$TWiki::cfg{NameFilter}//goi;
-
-        # Append .txt to files like we do to normal attachments
-        $fileName =~ s/$TWiki::cfg{UploadFilter}/$1\.txt/goi;
+        my $origFileName;
+        ( $fileName, $origFileName ) = Foswiki::Sandbox::sanitizeAttachmentName( $fileName );
 
         $hideFile = undef;
         $linkFile = undef;
@@ -331,7 +310,7 @@ sub doUnzip {
         }
 
         if ( $debug && ( $fileName ne $origFileName ) ) {
-            TWiki::Func::writeDebug(
+            Foswiki::Func::writeDebug(
                 "$pluginName - Renamed file $origFileName to $fileName");
         }
 
@@ -348,7 +327,7 @@ sub doUnzip {
         else {
 
             # FIXME: oops here
-            TWiki::Func::writeDebug(
+            Foswiki::Func::writeDebug(
 "$pluginName - Something went wrong with uploading of zip file $fileName: $zipRet"
             ) if $debug;
         }
@@ -389,7 +368,7 @@ sub openZipSanityCheck {
         if ($lowerCase) { $fileName = lc($fileName); }
         unless ($noSpaces) { $fileName =~ s/\s/_/go; }
 
-        $fileName =~ s/$TWiki::cfg{UploadFilter}/$1\.txt/goi;
+        $fileName =~ s/$Foswiki::cfg{UploadFilter}/$1\.txt/goi;
 
         if ( defined $dupCheck{"$fileName"} ) {
             return "Duplicate file in archive " . $fileName . " in " . $archive;
