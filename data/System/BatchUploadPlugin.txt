@@ -17,7 +17,7 @@ One line description, required for extensions repository catalog.
 
 ---++ Plugin Settings
 
-Plugin settings are stored as preferences values. To change the setting you need to overwrite them in %WIKIPREFSTOPIC%. Changing them here will have no effect! This allows you to upgrade the plugin without having worry about loosing your settings.
+Plugin settings are stored as preferences values. To change the setting you need to overwrite them in %WIKIPREFSTOPIC%. Changing them here will have no effect! This allows you to upgrade the plugin without having worry about losing your settings.
 
    * Enabled state - if disabled, does nothing. You will need to overwrite this if you want the plugin enabled anywhere (either in site or per-web)
       * Set BATCHUPLOADPLUGIN_ENABLED = 0
