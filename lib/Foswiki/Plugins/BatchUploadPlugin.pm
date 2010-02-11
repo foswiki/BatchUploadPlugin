@@ -4,7 +4,7 @@
 # Copyright (C) 2001-2004 Peter Thoeny, peter@thoeny.com
 # Copyright (C) Vito Miliano, ZacharyHamm, JohannesMartin, DiabJerius
 # Copyright (C) 2004 Martin Cleaver, Martin.Cleaver@BCS.org.uk
-# Copyright (C) 2009 Andrew Jones, andrewjones86@gmail.com
+# Copyright (C) 2009 - 2010 Andrew Jones, http://andrew-jones.com 
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -35,7 +35,7 @@ use vars qw(
 );
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.0';
+our $RELEASE = '1.1';
 our $SHORTDESCRIPTION = 'Attach multiple files at once by uploading a zip archive';
 our $NO_PREFS_IN_TOPIC = 1;
 our $pluginName = 'BatchUploadPlugin';
