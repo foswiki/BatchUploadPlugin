@@ -35,7 +35,7 @@ use vars qw(
 );
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.1';
+our $RELEASE = '1.1.1';
 our $SHORTDESCRIPTION = 'Attach multiple files at once by uploading a zip archive';
 our $NO_PREFS_IN_TOPIC = 1;
 our $pluginName = 'BatchUploadPlugin';

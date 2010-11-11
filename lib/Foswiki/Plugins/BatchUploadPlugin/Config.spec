@@ -1,4 +1,4 @@
-# ---+ Plugins
+# ---+ Extensions
 # ---++ BatchUploadPlugin
 # **BOOLEAN**
 # Allow users to pass a =batchupload= parameter to prevent expanding the zip
