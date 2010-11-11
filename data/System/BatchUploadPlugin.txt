@@ -85,7 +85,7 @@ In addition, use =configure= to set the =$Foswiki::cfg{Plugins}{BatchUploadPlugi
 | Plugin Release: | %$RELEASE% |
 | Plugin Version: | %$VERSION% |
 | Change History: | <!-- versions below in reverse order -->&nbsp; |
-| 11 Nov 2010 | Foswiki:Main.PadraigLennon: v1.2 - Update Config.spec to use Extensions not Plugins (Foswikitask:8467). |
+| 11 Nov 2010 | Foswiki:Main.PadraigLennon: v1.2 - Update Config.spec to use Extensions not Plugins (Foswikitask:9996). |
 | 11 Feb 2010 | Foswiki:Main.AndrewJones: v1.1 - Minor doc updates (Foswikitask:8467). Thanks to Foswiki:Main.BryanThale. |
 | 19 Mar 2009 | Foswiki:Main.AndrewJones: v1.0 - Ported to Foswiki; Small code fixes (using Foswiki API); Doc update |
 | 09 Jul 2008 | TWiki:Main.MarkusUeberall: Added support for zip file comments. All individual files now inherit the hide and link flags in the same way they inherit the comment specified in the upload form. |
