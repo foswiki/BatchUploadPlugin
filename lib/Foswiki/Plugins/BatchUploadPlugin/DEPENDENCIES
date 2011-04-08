@@ -1,2 +1,3 @@
 # Dependencies for BatchUploadPlugin
 Archive::Zip,>=1.18,cpan,Required.
+IO::File,>0,Required

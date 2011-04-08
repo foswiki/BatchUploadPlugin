@@ -4,7 +4,7 @@
 # Copyright (C) 2001-2004 Peter Thoeny, peter@thoeny.com
 # Copyright (C) Vito Miliano, ZacharyHamm, JohannesMartin, DiabJerius
 # Copyright (C) 2004 Martin Cleaver, Martin.Cleaver@BCS.org.uk
-# Copyright (C) 2009 - 2010 Andrew Jones, http://andrew-jones.com 
+# Copyright (C) 2009 - 2011 Andrew Jones, http://andrew-jones.com 
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -25,17 +25,17 @@ require Foswiki::Plugins;
 
 use strict;
 use Archive::Zip qw(:ERROR_CODES :CONSTANTS :PKZIP_CONSTANTS);
+use IO::File ();
 use warnings;
 use diagnostics;
 
 use vars qw(
-  $web $topic $user $installWeb $VERSION $RELEASE $pluginName
   $debug $pluginEnabled $stack $stackDepth $MAX_STACK_DEPTH
-  $importFileComments $fileCommentFlags $SHORTDESCRIPTION $NO_PREFS_IN_TOPIC
+  $importFileComments $fileCommentFlags
 );
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.2';
+our $RELEASE = '1.3';
 our $SHORTDESCRIPTION = 'Attach multiple files at once by uploading a zip archive';
 our $NO_PREFS_IN_TOPIC = 1;
 our $pluginName = 'BatchUploadPlugin';
@@ -52,7 +52,7 @@ BEGIN {
 }
 
 sub initPlugin {
-    ( $topic, $web, $user, $installWeb ) = @_;
+    my ( $topic, $web, $user, $installWeb ) = @_;
 
     # Get plugin debug flag
     $debug = $Foswiki::cfg{Plugins}{$pluginName}{Debug} || 0;
@@ -72,13 +72,15 @@ sub initPlugin {
 =pod
 
 Store callback called before the attachment is further processed.
-Preliminary attempt to tackle nested zips - does not actually work yet. Each time we fall through beforeAttachmentSaveHandler to the actual attaching, other
+Preliminary attempt to tackle nested zips - does not actually work yet. Each time we fall through beforeUploadHandler to the actual attaching, other
 attachments get lost.
 
 =cut
 
-sub beforeAttachmentSaveHandler {
-    my ( $attrHashRef, $topic, $web ) = @_;
+sub beforeUploadHandler {
+    my ( $attrHashRef, $meta ) = @_;
+    my $topic = $meta->topic();
+    my $web = $meta->web();
 
     Foswiki::Func::writeDebug(
 "- ${pluginName}::beforeAttachmentSaveHandler( $_[2].$_[1] - attachment: $attrHashRef->{attachment})"
@@ -106,7 +108,7 @@ sub beforeAttachmentSaveHandler {
     
     my $result = updateAttachment(
         $web, $topic, $attachmentName,
-        $attrHashRef->{"tmpFilename"},
+        $attrHashRef->{"stream"},
         $attrHashRef->{"comment"},
         $cgiQuery->param('hidefile') || '',
         $cgiQuery->param('createlink') || ''
@@ -154,7 +156,7 @@ sub updateAttachment {
         $webName,
         $topic,
         $originalZipName,
-        $zipArchive,    # cgi name
+        $zipArchive,    # stream
         $fileComment,
         $hideFlag,
         $linkFlag
@@ -348,10 +350,11 @@ sub openZipSanityCheck {
 
     my ( $archive, $webName, $topic, $realname ) = @_;
     my ( $lowerCase, $noSpaces, $noredirect ) = ( 0, 0, 0 );
+    bless $archive, 'IO::File'; # needs to be seekable, so bless into IO::File
     my $zip = Archive::Zip->new();
     my ( @memberNames, $fileName, $member, %dupCheck, $sizeLimit );
 
-    if ( $zip->read($archive) != AZ_OK ) {
+    if ( $zip->readFromFileHandle($archive) != AZ_OK ) {
         return "Zip read error or not a zip file. " . $archive;
     }
 
@@ -366,12 +369,12 @@ sub openZipSanityCheck {
         $fileName = $2;
 
         if ($lowerCase) { $fileName = lc($fileName); }
-        unless ($noSpaces) { $fileName =~ s/\s/_/go; }
+        unless ($noSpaces) { $fileName =~ s/\s/_/g; }
 
-        $fileName =~ s/$Foswiki::cfg{UploadFilter}/$1\.txt/goi;
+        $fileName =~ s/$Foswiki::cfg{UploadFilter}/$1\.txt/gi;
 
         if ( defined $dupCheck{"$fileName"} ) {
-            return "Duplicate file in archive " . $fileName . " in " . $archive;
+            return "Duplicate file in archive " . $fileName . " in archive";
         }
         else {
             $dupCheck{"$fileName"} = $fileName;
